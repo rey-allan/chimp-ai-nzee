@@ -1,9 +1,13 @@
 """Implementation of chimpanzee Theory of Mind experiment as a Pycolab game."""
 import curses
 import sys
+from typing import List, Union
 
+import numpy as np
 from pycolab import ascii_art, cropping, human_ui
 from pycolab import things as plab_things
+from pycolab.engine import Engine
+from pycolab.plot import Plot
 from pycolab.prefab_parts import sprites as prefab_sprites
 
 ENV_ART = [
@@ -59,6 +63,23 @@ COLOR_FG = {
 }
 
 
+class Characters:
+    """The characters representing the objects in the experiment
+
+    - SUBORDINATE
+    - DOMINANT
+    - WALL
+    - COLLECTIBLE_LEFT
+    - COLLECTIBLE_RIGHT
+    """
+
+    SUBORDINATE = "S"
+    DOMINANT = "D"
+    WALL = "#"
+    COLLECTIBLE_LEFT = "l"
+    COLLECTIBLE_RIGHT = "r"
+
+
 class Actions:
     """The available actions:
 
@@ -75,14 +96,31 @@ class Actions:
     RIGHT = 3
     STAY = 4
 
+    @staticmethod
+    def list() -> List[int]:
+        """Lists all the available actions
+
+        :return: A list of all available actions
+        :rtype: List[int]
+        """
+        return [Actions.UP, Actions.DOWN, Actions.LEFT, Actions.RIGHT, Actions.STAY]
+
 
 class SubjectSprite(prefab_sprites.MazeWalker):
     """A `Sprite` for the subjects of the experiment, the subordinate and the dominant."""
 
-    def __init__(self, corner, position, character):
+    def __init__(self, corner, position, character) -> None:
         super().__init__(corner, position, character, impassable="#")
 
-    def update(self, actions, board, layers, backdrop, things, the_plot):
+    def update(
+        self,
+        actions: dict[str, int],
+        board: np.ndarray,
+        layers: dict[str, bool],
+        backdrop: plab_things.Backdrop,
+        things: dict[str, Union[plab_things.Sprite, plab_things.Drape]],
+        the_plot: Plot,
+    ) -> None:
         del backdrop, things, layers
 
         # Actions are sent as a `dict`: {"S": action_subordinate, "D": action_dominant}
@@ -107,11 +145,19 @@ class CollectibleDrape(plab_things.Drape):
     penalizing or rewarding the subordinate appropriately.
     """
 
-    def __init__(self, curtain, character, name):
+    def __init__(self, curtain, character, name) -> None:
         super().__init__(curtain, character)
         self._name = name
 
-    def update(self, actions, board, layers, backdrop, things, the_plot):
+    def update(
+        self,
+        actions: dict[str, int],
+        board: np.ndarray,
+        layers: dict[str, bool],
+        backdrop: plab_things.Backdrop,
+        things: dict[str, Union[plab_things.Sprite, plab_things.Drape]],
+        the_plot: Plot,
+    ) -> None:
         subordinate_position = things["S"].position
         dominant_position = things["D"].position
 
@@ -137,7 +183,7 @@ class CollectibleDrape(plab_things.Drape):
             self.curtain[dominant_position] = False
 
 
-def make_game(setting):
+def make_game(setting: int) -> Engine:
     """Builds and returns a game for the chimpanzee Theory of Mind experiment
 
     :param setting: The setting to use, either 0 (no barrier) or 1 (with barrier)
@@ -158,7 +204,7 @@ def make_game(setting):
     )
 
 
-def make_subordinate_cropper():
+def make_subordinate_cropper() -> cropping.ObservationCropper:
     """Builds a fixed-sized observation cropper from the subordinate's perspective
 
     :return: A fixed size observation cropper
@@ -169,7 +215,7 @@ def make_subordinate_cropper():
     return cropping.FixedCropper(top_left_corner=(0, 0), rows=11, cols=11, pad_char=" ")
 
 
-def _main(argv=()):
+def _main(argv=()) -> None:
     setting = int(argv[1]) if len(argv) > 1 else 0
 
     game = make_game(setting)
