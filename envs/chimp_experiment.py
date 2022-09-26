@@ -2,7 +2,7 @@
 import curses
 import sys
 
-from pycolab import ascii_art, human_ui
+from pycolab import ascii_art, cropping, human_ui
 from pycolab import things as plab_things
 from pycolab.prefab_parts import sprites as prefab_sprites
 
@@ -59,19 +59,21 @@ COLOR_FG = {
 }
 
 
-def make_game(setting):
-    """Builds and returns a setting for the chimpanzee Theory of Mind experiment"""
-    return ascii_art.ascii_art_to_game(
-        ENV_ART[setting],
-        what_lies_beneath=" ",
-        sprites={"S": SubjectSprite, "D": SubjectSprite},
-        drapes={
-            "l": ascii_art.Partial(CollectibleDrape, name="Left"),
-            "r": ascii_art.Partial(CollectibleDrape, name="Right"),
-        },
-        update_schedule=["S", "D", "l", "r"],
-        z_order="lrSD",
-    )
+class Actions:
+    """The available actions:
+
+    - UP
+    - DOWN
+    - LEFT
+    - RIGHT
+    - STAY
+    """
+
+    UP = 0
+    DOWN = 1
+    LEFT = 2
+    RIGHT = 3
+    STAY = 4
 
 
 class SubjectSprite(prefab_sprites.MazeWalker):
@@ -135,6 +137,38 @@ class CollectibleDrape(plab_things.Drape):
             self.curtain[dominant_position] = False
 
 
+def make_game(setting):
+    """Builds and returns a game for the chimpanzee Theory of Mind experiment
+
+    :param setting: The setting to use, either 0 (no barrier) or 1 (with barrier)
+    :type setting: int
+    :return: A game reprsentation for the chimpanzee Theory of Mind experiment
+    :rtype: pycolab.engine.Engine
+    """
+    return ascii_art.ascii_art_to_game(
+        ENV_ART[setting],
+        what_lies_beneath=" ",
+        sprites={"S": SubjectSprite, "D": SubjectSprite},
+        drapes={
+            "l": ascii_art.Partial(CollectibleDrape, name="Left"),
+            "r": ascii_art.Partial(CollectibleDrape, name="Right"),
+        },
+        update_schedule=["S", "D", "l", "r"],
+        z_order="lrSD",
+    )
+
+
+def make_subordinate_cropper():
+    """Builds a fixed-sized observation cropper from the subordinate's perspective
+
+    :return: A fixed size observation cropper
+    :rtype: cropping.ObservationCropper
+    """
+    # A fixed sized cropper that mimics what the subordinate can see: the location of
+    # the two collectibles, and whether or not there is a barrier in front of the left one
+    return cropping.FixedCropper(top_left_corner=(0, 0), rows=11, cols=11, pad_char=" ")
+
+
 def _main(argv=()):
     setting = int(argv[1]) if len(argv) > 1 else 0
 
@@ -144,17 +178,18 @@ def _main(argv=()):
     # pylint: disable=invalid-name
     ui = human_ui.CursesUi(
         keys_to_actions={
-            "w": {"S": 0, "D": 4},
-            "s": {"S": 1, "D": 4},
-            "a": {"S": 2, "D": 4},
-            "d": {"S": 3, "D": 4},
-            curses.KEY_UP: {"S": 4, "D": 0},
-            curses.KEY_DOWN: {"S": 4, "D": 1},
-            curses.KEY_LEFT: {"S": 4, "D": 2},
-            curses.KEY_RIGHT: {"S": 4, "D": 3},
+            "w": {"S": Actions.UP, "D": Actions.STAY},
+            "s": {"S": Actions.DOWN, "D": Actions.STAY},
+            "a": {"S": Actions.LEFT, "D": Actions.STAY},
+            "d": {"S": Actions.RIGHT, "D": Actions.STAY},
+            curses.KEY_UP: {"S": Actions.STAY, "D": Actions.UP},
+            curses.KEY_DOWN: {"S": Actions.STAY, "D": Actions.DOWN},
+            curses.KEY_LEFT: {"S": Actions.STAY, "D": Actions.LEFT},
+            curses.KEY_RIGHT: {"S": Actions.STAY, "D": Actions.RIGHT},
         },
         delay=100,
         colour_fg=COLOR_FG,
+        croppers=[make_subordinate_cropper()],
     )
 
     ui.play(game)
