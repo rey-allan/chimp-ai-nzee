@@ -1,6 +1,7 @@
 """Wrapper of chimpanzee Theory of Mind Pycolab experiment as a Gym environment."""
 import random
 import sys
+import time
 import tkinter
 from collections import defaultdict
 from itertools import product
@@ -215,6 +216,8 @@ class _Renderer:
                 self._canvas.itemconfig(cells[i], fill=self._colors[value])
 
         self._root.update()
+        # Add a small delay for better visualization
+        time.sleep(0.2)
 
     def __del__(self):
         self._root.destroy()
