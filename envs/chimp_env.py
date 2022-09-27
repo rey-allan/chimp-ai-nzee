@@ -1,4 +1,5 @@
 """Wrapper of chimpanzee Theory of Mind Pycolab experiment as a Gym environment."""
+import random
 import sys
 import tkinter
 from collections import defaultdict
@@ -35,6 +36,8 @@ class ChimpTheoryOfMindEnv(gym.Env):
     def __init__(self, seed: int = None) -> None:
         super().__init__()
 
+        random.seed(seed)
+
         self._game = None
         self._obs_cropper = make_subordinate_cropper()
         # Use a default observation cropper for rendering
@@ -44,6 +47,7 @@ class ChimpTheoryOfMindEnv(gym.Env):
         self._done = False
         self._raw_obs = None
         self._renderer = None
+        self._dominant_agent = _Dominant()
 
         # The observation is the viewbox of the subordinate perspective
         self.observation_space = spaces.Box(low=0, high=1, shape=(1, self._obs_cropper.rows, self._obs_cropper.cols))
@@ -64,6 +68,8 @@ class ChimpTheoryOfMindEnv(gym.Env):
         self._render_cropper.set_engine(self._game)
         self._renderer = _Renderer(cell_size=25, colors=COLORS, croppers=[self._render_cropper])
 
+        self._dominant_agent.reset(setting)
+
         observation, _, _ = self._game.its_showtime()
         self._raw_obs = observation
         self._done = self._game.game_over
@@ -71,18 +77,23 @@ class ChimpTheoryOfMindEnv(gym.Env):
         return self._wrap_observation(observation)
 
     # pylint: disable=arguments-renamed
-    def step(self, actions: dict[str, int]) -> Tuple[np.ndarray, float, bool, dict]:
-        """Steps into the environment executing the given actions for both subjects
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+        """Steps into the environment executing the given action for the subordinate agent
 
-        :param actions: The actions to execute per subject: {"S": subordinate_action, "D": dominant_action}
-        :type actions: dict[str, int]
-        :return: A tuple of subordiante observation, reward, done?, info
+        :param action: The action to execute for the subordinate
+        :type action: int
+        :return: A tuple of subordinate observation, reward, done?, info
         :rtype: Tuple[np.ndarray, float, bool, dict]
         """
         assert self._game is not None, "Game is not initialized, call reset function before step"
         assert self._done is False, "Step can not be called after the game is terminated!"
 
-        observation, reward, _ = self._game.play(actions)
+        observation, reward, _ = self._game.play(
+            {
+                Characters.SUBORDINATE: action,
+                Characters.DOMINANT: self._dominant_agent.action(),
+            }
+        )
         self._raw_obs = observation
         self._done = self._game.game_over
 
@@ -94,6 +105,74 @@ class ChimpTheoryOfMindEnv(gym.Env):
 
     def _wrap_observation(self, observation: np.ndarray) -> np.ndarray:
         return self._to_feature(self._obs_cropper.crop(observation))
+
+
+class _Dominant:
+    """Defines the deterministic behavior of the dominant agent"""
+
+    PATH_TO_LEFT = [
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.UP,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.UP,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+    ]
+
+    PATH_TO_RIGHT = [
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.DOWN,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.DOWN,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+    ]
+
+    def __init__(self) -> None:
+        # Track the direction the subject is going
+        self._path = None
+        # Tracks the next action to take
+        self._action_idx = 0
+
+    def reset(self, setting: int) -> None:
+        """Resets the agent
+
+        :param setting: The experiment setting being used
+        :type setting: int
+        """
+        # No barrier setting, choose a random direction to go
+        if setting == 0:
+            self._path = random.choice([self.PATH_TO_LEFT, self.PATH_TO_RIGHT])
+        else:
+            # For the barrier setting, always choose the right (the one not behind the barrier)
+            self._path = self.PATH_TO_RIGHT
+
+    def action(self) -> int:
+        """Returns the next action to take
+
+        :return: The next action
+        :rtype: int
+        """
+        assert self._path is not None, "Dominant subject hasn't been initialized! Make sure to call `reset()` first."
+
+        try:
+            action = self._path[self._action_idx]
+            self._action_idx += 1
+        except IndexError:
+            # The dominant agent has reached the end of its chosen path, just stay in place thereafter
+            action = Actions.STAY
+
+        return action
 
 
 class _Renderer:
@@ -175,8 +254,8 @@ def _main(argv=()) -> None:
     total_reward = 0
 
     while not done:
-        actions = {Characters.SUBORDINATE: env.action_space.sample(), Characters.DOMINANT: env.action_space.sample()}
-        _, reward, done, _ = env.step(actions)
+        action = env.action_space.sample()
+        _, reward, done, _ = env.step(action)
         env.render()
         total_reward += reward if reward else 0.0
 
