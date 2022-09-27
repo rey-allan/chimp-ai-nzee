@@ -1,6 +1,5 @@
 """Wrapper of chimpanzee Theory of Mind Pycolab experiment as a Gym environment."""
 import random
-import sys
 import time
 import tkinter
 from collections import defaultdict
@@ -11,18 +10,25 @@ import gym
 import numpy as np
 
 # pylint: disable=import-error
-from chimp_experiment import Actions, Characters, make_game, make_subordinate_cropper
+from chimp_experiment import Actions, Characters, ExperimentSettings, make_game, make_subordinate_cropper
 from gym import spaces
 from pycolab.cropping import ObservationCropper
-from pycolab.rendering import ObservationToFeatureArray
 
-# Colors for rendering only
-COLORS = {
+# Colors for rendering
+RENDERING_COLORS = {
     Characters.SUBORDINATE: "#00FFFF",
     Characters.DOMINANT: "#FF00FF",
     Characters.WALL: "#DCDCDC",
     Characters.COLLECTIBLE_LEFT: "#FFFF6E",
     Characters.COLLECTIBLE_RIGHT: "#FFFF6E",
+}
+# Colors for producing the observation image (state)
+OBSERVATION_COLORS = {
+    Characters.SUBORDINATE: (0, 255, 255),
+    Characters.DOMINANT: (255, 0, 255),
+    Characters.WALL: (220, 220, 220),
+    Characters.COLLECTIBLE_LEFT: (255, 255, 110),
+    Characters.COLLECTIBLE_RIGHT: (255, 255, 110),
 }
 
 
@@ -44,30 +50,33 @@ class ChimpTheoryOfMindEnv(gym.Env):
         # Use a default observation cropper for rendering
         # This default cropper will actually display the whole game
         self._render_cropper = ObservationCropper()
-        self._to_feature = ObservationToFeatureArray(Characters.SUBORDINATE)
         self._done = False
         self._raw_obs = None
         self._renderer = None
         self._dominant_agent = _Dominant()
 
-        # The observation is the viewbox of the subordinate perspective
-        self.observation_space = spaces.Box(low=0, high=1, shape=(1, self._obs_cropper.rows, self._obs_cropper.cols))
+        # The observation is the RBG viewbox of the subordinate perspective
+        self.observation_space = spaces.Box(
+            low=0,
+            high=255,
+            shape=(3, self._obs_cropper.rows, self._obs_cropper.cols),
+            dtype=np.uint8,
+        )
         self.action_space = spaces.Discrete(len(Actions.list()))
         self.action_space.seed(seed)
 
-    # pylint: disable=arguments-differ
-    def reset(self, setting: int = 0) -> np.ndarray:
-        """Resets the environment to the given experiment setting
+    def reset(self) -> np.ndarray:
+        """Resets the environment
 
-        :param setting: The experiment setting to use, defaults to 0
-        :type setting: int, optional
-        :return: The first observation for the subordinate subject
+        :return: The first state for the subordinate subject
         :rtype: np.ndarray
         """
+        # Reset to a random experiment setting
+        setting = random.choice(ExperimentSettings.list())
         self._game = make_game(setting)
         self._obs_cropper.set_engine(self._game)
         self._render_cropper.set_engine(self._game)
-        self._renderer = _Renderer(cell_size=25, colors=COLORS, croppers=[self._render_cropper])
+        self._renderer = _Renderer(cell_size=25, colors=RENDERING_COLORS, croppers=[self._render_cropper])
 
         self._dominant_agent.reset(setting)
 
@@ -75,9 +84,8 @@ class ChimpTheoryOfMindEnv(gym.Env):
         self._raw_obs = observation
         self._done = self._game.game_over
 
-        return self._wrap_observation(observation)
+        return self._generate_obs(observation)
 
-    # pylint: disable=arguments-renamed
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         """Steps into the environment executing the given action for the subordinate agent
 
@@ -98,14 +106,29 @@ class ChimpTheoryOfMindEnv(gym.Env):
         self._raw_obs = observation
         self._done = self._game.game_over
 
-        return self._wrap_observation(observation), reward, self._done, {}
+        return self._generate_obs(observation), reward, self._done, {}
 
-    def render(self) -> None:
+    def render(self, mode="human") -> None:
         """Renders the environment in a separate window"""
         self._renderer(self._raw_obs)
 
-    def _wrap_observation(self, observation: np.ndarray) -> np.ndarray:
-        return self._to_feature(self._obs_cropper.crop(observation))
+    def close(self) -> None:
+        """Closes the environment"""
+        del self._renderer
+
+    def _generate_obs(self, observation: np.ndarray) -> np.ndarray:
+        obs = self._obs_cropper.crop(observation)
+        img = np.zeros(self.observation_space.shape)
+
+        # Generate an RGB image of the cropped observation
+        for character in Characters.list():
+            value = ord(character)
+            color = OBSERVATION_COLORS[character]
+            img[0, obs.board == value] = color[0]
+            img[1, obs.board == value] = color[1]
+            img[2, obs.board == value] = color[2]
+
+        return img.astype(np.uint8)
 
 
 class _Dominant:
@@ -152,7 +175,7 @@ class _Dominant:
         :type setting: int
         """
         # No barrier setting, choose a random direction to go
-        if setting == 0:
+        if setting == ExperimentSettings.NO_BARRIER:
             self._path = random.choice([self.PATH_TO_LEFT, self.PATH_TO_RIGHT])
         else:
             # For the barrier setting, always choose the right (the one not behind the barrier)
@@ -248,11 +271,10 @@ class _Renderer:
         return all_cells
 
 
-def _main(argv=()) -> None:
-    setting = int(argv[1]) if len(argv) > 1 else 0
+def _main() -> None:
     env = ChimpTheoryOfMindEnv(seed=42)
 
-    _ = env.reset(setting)
+    _ = env.reset()
     done = False
     total_reward = 0
 
@@ -266,4 +288,4 @@ def _main(argv=()) -> None:
 
 
 if __name__ == "__main__":
-    _main(sys.argv)
+    _main()

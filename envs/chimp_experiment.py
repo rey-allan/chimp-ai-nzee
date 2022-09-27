@@ -79,6 +79,21 @@ class Characters:
     COLLECTIBLE_LEFT = "l"
     COLLECTIBLE_RIGHT = "r"
 
+    @staticmethod
+    def list() -> List[str]:
+        """Lists all the available characters
+
+        :return: A list of all available characters
+        :rtype: List[str]
+        """
+        return [
+            Characters.SUBORDINATE,
+            Characters.DOMINANT,
+            Characters.WALL,
+            Characters.COLLECTIBLE_LEFT,
+            Characters.COLLECTIBLE_RIGHT,
+        ]
+
 
 class Actions:
     """The available actions:
@@ -104,6 +119,26 @@ class Actions:
         :rtype: List[int]
         """
         return [Actions.UP, Actions.DOWN, Actions.LEFT, Actions.RIGHT, Actions.STAY]
+
+
+class ExperimentSettings:
+    """The available experiment settings:
+
+    - NO_BARRIER
+    - BARRIER
+    """
+
+    NO_BARRIER = 0
+    BARRIER = 1
+
+    @staticmethod
+    def list() -> List[int]:
+        """Lists all the available experiment settings
+
+        :return: A list of all available experiment settings
+        :rtype: List[int]
+        """
+        return [ExperimentSettings.NO_BARRIER, ExperimentSettings.BARRIER]
 
 
 class SubjectSprite(prefab_sprites.MazeWalker):
@@ -182,6 +217,9 @@ class CollectibleDrape(plab_things.Drape):
             the_plot.log("Dominant has reached a collectible!")
             self.curtain[dominant_position] = False
 
+        # Default reward
+        the_plot.add_reward(0.0)
+
 
 def make_game(setting: int) -> Engine:
     """Builds and returns a game for the chimpanzee Theory of Mind experiment
@@ -205,14 +243,13 @@ def make_game(setting: int) -> Engine:
 
 
 def make_subordinate_cropper() -> cropping.ObservationCropper:
-    """Builds a fixed-sized observation cropper from the subordinate's perspective
+    """Builds an observation cropper around the subordinate's perspective
 
-    :return: A fixed size observation cropper
+    :return: An observation cropper
     :rtype: cropping.ObservationCropper
     """
-    # A fixed sized cropper that mimics what the subordinate can see: the location of
-    # the two collectibles, and whether or not there is a barrier in front of the left one
-    return cropping.FixedCropper(top_left_corner=(0, 0), rows=11, cols=11, pad_char=" ")
+    # A cropper that mimics what the subordinate can see
+    return cropping.ScrollingCropper(rows=11, cols=11, to_track=[Characters.SUBORDINATE], scroll_margins=(0, None))
 
 
 def _main(argv=()) -> None:
