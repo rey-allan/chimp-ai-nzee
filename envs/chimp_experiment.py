@@ -22,11 +22,11 @@ ENV_ART = [
         "####################",
         "#                  #",
         "#                  #",
-        "#        l         #",
+        "#         l        #",
         "#                  #",
         "#S                D#",
         "#                  #",
-        "#        r         #",
+        "#         r        #",
         "#                  #",
         "#                  #",
         "####################",
@@ -35,12 +35,12 @@ ENV_ART = [
     [
         "####################",
         "#                  #",
-        "#         #        #",
-        "#        l#        #",
-        "#         #        #",
+        "#          #       #",
+        "#         l#       #",
+        "#          #       #",
         "#S                D#",
         "#                  #",
-        "#        r         #",
+        "#         r        #",
         "#                  #",
         "#                  #",
         "####################",
@@ -196,29 +196,32 @@ class CollectibleDrape(plab_things.Drape):
         subordinate_position = things["S"].position
         dominant_position = things["D"].position
 
-        # If the subordinate has reached a collectible
-        if self.curtain[subordinate_position]:
-            # But it is the same location the dominant went for, it gets penalized
-            if subordinate_position == dominant_position:
-                the_plot.log("Subordinate and dominant reached the same collectible!")
-                the_plot.add_reward(-100.0)
-            # If it reaches that collectible by itself, then it received the reward
-            else:
-                the_plot.log("Subordinate has reached a collectible!")
-                the_plot.add_reward(100.0)
+        # If the subordinate reaches for a collectible that the dominant went for, it gets penalized
+        if subordinate_position == dominant_position:
+            the_plot.log("Subordinate and dominant reached the same collectible!")
+            the_plot.add_reward(-100.0)
+            the_plot.terminate_episode()
 
+        # If the subordinate has reached a collectible that the dominant didn't go for, it gets rewarded
+        # Based on the experiment design, it is guaranteed that the dominant will reach one of the
+        # two collectibles first. So, we can safely reward the subordinate if it reaches a collectible
+        # because we know the dominant must have reached the other one because their positions are not
+        # the same (first condition above).
+        if self.curtain[subordinate_position]:
+            the_plot.log("Subordinate has reached a collectible!")
+            the_plot.add_reward(100.0)
             # Track information of which collectible was reached by the subordinate
             the_plot["Collected"] = self._name
-            # Experiment is done
             the_plot.terminate_episode()
 
         # If the dominant has reached a collectible, we simply remove it, without any reward
+        # This is the case where the dominant reaches a collectible but the subordinate hasn't yet
         if self.curtain[dominant_position]:
             the_plot.log("Dominant has reached a collectible!")
             self.curtain[dominant_position] = False
 
-        # Default reward
-        the_plot.add_reward(0.0)
+        # Default reward ("living penalty")
+        the_plot.add_reward(-1.0)
 
 
 def make_game(setting: int) -> Engine:
@@ -249,7 +252,7 @@ def make_subordinate_cropper() -> cropping.ObservationCropper:
     :rtype: cropping.ObservationCropper
     """
     # A cropper that mimics what the subordinate can see
-    return cropping.ScrollingCropper(rows=11, cols=11, to_track=[Characters.SUBORDINATE], scroll_margins=(0, None))
+    return cropping.ScrollingCropper(rows=11, cols=13, to_track=[Characters.SUBORDINATE], scroll_margins=(0, None))
 
 
 def _main(argv=()) -> None:
