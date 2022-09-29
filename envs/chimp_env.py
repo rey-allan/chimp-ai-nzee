@@ -8,11 +8,11 @@ from typing import List, Tuple
 
 import gym
 import numpy as np
-
-# pylint: disable=import-error
-from chimp_experiment import Actions, Characters, ExperimentSettings, make_game, make_subordinate_cropper
+import torch
 from gym import spaces
 from pycolab.cropping import ObservationCropper
+
+from .chimp_experiment import Actions, Characters, ExperimentSettings, make_game, make_subordinate_cropper
 
 # Colors for rendering
 RENDERING_COLORS = {
@@ -44,6 +44,7 @@ class ChimpTheoryOfMindEnv(gym.Env):
         super().__init__()
 
         random.seed(seed)
+        torch.manual_seed(seed)
 
         self._game = None
         self._obs_cropper = make_subordinate_cropper()
@@ -114,7 +115,7 @@ class ChimpTheoryOfMindEnv(gym.Env):
 
     def close(self) -> None:
         """Closes the environment"""
-        del self._renderer
+        self._renderer.close()
 
     def _generate_obs(self, observation: np.ndarray) -> np.ndarray:
         obs = self._obs_cropper.crop(observation)
@@ -137,12 +138,11 @@ class _Dominant:
     PATH_TO_LEFT = [
         Actions.LEFT,
         Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
         Actions.UP,
-        Actions.LEFT,
-        Actions.LEFT,
         Actions.UP,
-        Actions.LEFT,
-        Actions.LEFT,
         Actions.LEFT,
         Actions.LEFT,
         Actions.LEFT,
@@ -151,12 +151,11 @@ class _Dominant:
     PATH_TO_RIGHT = [
         Actions.LEFT,
         Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
+        Actions.LEFT,
         Actions.DOWN,
-        Actions.LEFT,
-        Actions.LEFT,
         Actions.DOWN,
-        Actions.LEFT,
-        Actions.LEFT,
         Actions.LEFT,
         Actions.LEFT,
         Actions.LEFT,
@@ -180,6 +179,7 @@ class _Dominant:
         else:
             # For the barrier setting, always choose the right (the one not behind the barrier)
             self._path = self.PATH_TO_RIGHT
+        self._action_idx = 0
 
     def action(self) -> int:
         """Returns the next action to take
@@ -242,7 +242,8 @@ class _Renderer:
         # Add a small delay for better visualization
         time.sleep(0.2)
 
-    def __del__(self):
+    def close(self) -> None:
+        """Closes the renderer window"""
         self._root.destroy()
 
     def _init_render(self) -> List:
