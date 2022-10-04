@@ -229,7 +229,7 @@ class CollectibleDrape(plab_things.Drape):
             self.curtain[dominant_position] = False
 
         # Default reward ("living penalty")
-        the_plot.add_reward(-1.0)
+        the_plot.add_reward(0.0)
 
 
 def make_game(setting: int) -> Engine:
