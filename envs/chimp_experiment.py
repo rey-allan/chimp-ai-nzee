@@ -22,11 +22,15 @@ ENV_ART = [
         "####################",
         "#                  #",
         "#                  #",
+        "#                  #",
+        "#                  #",
         "#         l        #",
         "#                  #",
         "#S                D#",
         "#                  #",
         "#         r        #",
+        "#                  #",
+        "#                  #",
         "#                  #",
         "#                  #",
         "####################",
@@ -35,12 +39,16 @@ ENV_ART = [
     [
         "####################",
         "#                  #",
+        "#                  #",
+        "#                  #",
         "#          #       #",
         "#         l#       #",
         "#          #       #",
         "#S                D#",
         "#                  #",
         "#         r        #",
+        "#                  #",
+        "#                  #",
         "#                  #",
         "#                  #",
         "####################",
@@ -252,7 +260,7 @@ def make_subordinate_cropper() -> cropping.ObservationCropper:
     :rtype: cropping.ObservationCropper
     """
     # A cropper that mimics what the subordinate can see
-    return cropping.ScrollingCropper(rows=11, cols=13, to_track=[Characters.SUBORDINATE], scroll_margins=(0, None))
+    return cropping.ScrollingCropper(rows=15, cols=15, to_track=[Characters.SUBORDINATE], scroll_margins=(0, None))
 
 
 def _main(argv=()) -> None:
