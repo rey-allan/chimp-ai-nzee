@@ -11,6 +11,8 @@ import numpy as np
 import torch
 from gym import spaces
 from pycolab.cropping import ObservationCropper
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import VecFrameStack
 
 from .chimp_experiment import Actions, Characters, ExperimentSettings, make_game, make_subordinate_cropper
 
@@ -130,6 +132,24 @@ class ChimpTheoryOfMindEnv(gym.Env):
             img[2, obs.board == value] = color[2]
 
         return img.astype(np.uint8)
+
+
+def make_env(n_frames: int = 4, n_envs: int = 1, seed: int = None) -> ChimpTheoryOfMindEnv:
+    """Builds a chimp Theory of Mind environment
+
+    :param n_frames: The number of frames to stack as input to the agent, defaults to 4
+    :type n_frames: int, optional
+    :param n_envs: The number of concurrent environments to use, defaults to 1
+    :type n_envs: int, optional
+    :param seed: The seed to use for the random number generator, defaults to None
+    :type seed: int, optional
+    :return: An instance of the environment
+    :rtype: ChimpTheoryOfMindEnv
+    """
+    env = make_vec_env(ChimpTheoryOfMindEnv, n_envs=n_envs, seed=seed, env_kwargs=dict(seed=seed))
+    env = VecFrameStack(env, n_stack=n_frames)
+
+    return env
 
 
 class _Dominant:
