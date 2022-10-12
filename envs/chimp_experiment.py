@@ -1,9 +1,15 @@
 """Implementation of chimpanzee Theory of Mind experiment as a Pycolab game."""
 import curses
 import sys
+import warnings
 from typing import List, Union
 
 import numpy as np
+
+# Ignore future warnings from pycolab
+# See: https://stackoverflow.com/a/15778297
+warnings.simplefilter(action="ignore", category=FutureWarning)
+# pylint: disable=wrong-import-position
 from pycolab import ascii_art, cropping, human_ui
 from pycolab import things as plab_things
 from pycolab.engine import Engine
@@ -147,6 +153,21 @@ class ExperimentSettings:
         :rtype: List[int]
         """
         return [ExperimentSettings.NO_BARRIER, ExperimentSettings.BARRIER]
+
+    @staticmethod
+    def name(setting: int) -> str:
+        """Returns the human-readable name of the given setting
+
+        :param setting: The experiment setting
+        :type setting: int
+        :return: The name
+        :rtype: str
+        """
+        if setting == 0:
+            return "NO BARRIER"
+        if setting == 1:
+            return "BARRIER"
+        return "N/A"
 
 
 class SubjectSprite(prefab_sprites.MazeWalker):

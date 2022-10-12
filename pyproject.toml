@@ -12,6 +12,7 @@ gym = "0.21.0"
 stable-baselines3 = "^1.6.0"
 tensorboard = "^2.10.1"
 tqdm = "^4.64.1"
+matplotlib = "^3.6.1"
 
 [tool.poetry.dev-dependencies]
 black = "^22.8.0"

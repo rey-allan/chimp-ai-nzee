@@ -42,12 +42,13 @@ class ChimpTheoryOfMindEnv(gym.Env):
     :type seed: int, optional
     """
 
-    def __init__(self, seed: int = None) -> None:
+    def __init__(self, experiment_setting: int = None, seed: int = None) -> None:
         super().__init__()
 
         random.seed(seed)
         torch.manual_seed(seed)
 
+        self._setting = experiment_setting
         self._game = None
         self._obs_cropper = make_subordinate_cropper()
         # Use a default observation cropper for rendering
@@ -74,8 +75,8 @@ class ChimpTheoryOfMindEnv(gym.Env):
         :return: The first state for the subordinate subject
         :rtype: np.ndarray
         """
-        # Reset to a random experiment setting
-        setting = random.choice(ExperimentSettings.list())
+        # Reset to a random experiment setting, if not provided
+        setting = self._setting if self._setting is not None else random.choice(ExperimentSettings.list())
         self._game = make_game(setting)
         self._obs_cropper.set_engine(self._game)
         self._render_cropper.set_engine(self._game)
@@ -109,7 +110,9 @@ class ChimpTheoryOfMindEnv(gym.Env):
         self._raw_obs = observation
         self._done = self._game.game_over
 
-        return self._generate_obs(observation), reward, self._done, {}
+        info = {"Item Collected": self._game.the_plot.get("Collected", None)}
+
+        return self._generate_obs(observation), reward, self._done, info
 
     def render(self, mode="human") -> None:
         """Renders the environment in a separate window"""
@@ -134,19 +137,31 @@ class ChimpTheoryOfMindEnv(gym.Env):
         return img.astype(np.uint8)
 
 
-def make_env(n_frames: int = 4, n_envs: int = 1, seed: int = None) -> ChimpTheoryOfMindEnv:
+def make_env(
+    n_frames: int = 4,
+    n_envs: int = 1,
+    experiment_setting: int = None,
+    seed: int = None,
+) -> ChimpTheoryOfMindEnv:
     """Builds a chimp Theory of Mind environment
 
     :param n_frames: The number of frames to stack as input to the agent, defaults to 4
     :type n_frames: int, optional
     :param n_envs: The number of concurrent environments to use, defaults to 1
     :type n_envs: int, optional
+    :param experiment_setting: The experiment setting to fix the environment to, defaults to None
+    :type experiment_setting: int, optional
     :param seed: The seed to use for the random number generator, defaults to None
     :type seed: int, optional
     :return: An instance of the environment
     :rtype: ChimpTheoryOfMindEnv
     """
-    env = make_vec_env(ChimpTheoryOfMindEnv, n_envs=n_envs, seed=seed, env_kwargs=dict(seed=seed))
+    env = make_vec_env(
+        ChimpTheoryOfMindEnv,
+        n_envs=n_envs,
+        seed=seed,
+        env_kwargs=dict(experiment_setting=experiment_setting, seed=seed),
+    )
     env = VecFrameStack(env, n_stack=n_frames)
 
     return env

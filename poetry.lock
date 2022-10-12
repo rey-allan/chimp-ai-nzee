@@ -444,7 +444,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "matplotlib"
-version = "3.6.0"
+version = "3.6.1"
 description = "Python plotting package"
 category = "main"
 optional = false
@@ -949,7 +949,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "d3bd9311f7822642f7e674c11e400536b52ba76bf4bc06ddc6ea807eb0b7c20b"
+content-hash = "90a35aa907735c2bc04df2496fdb120265171fb49181bec62936e387d89c8eb1"
 
 [metadata.files]
 absl-py = []
