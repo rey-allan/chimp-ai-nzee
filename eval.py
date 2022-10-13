@@ -3,6 +3,12 @@ import argparse
 from pathlib import Path
 from typing import Dict, List
 
+import matplotlib
+
+# pylint: disable=wrong-import-position
+# Use non-interactive backend to avoid conflict between plots and TKinter (from the env renderer)
+# See: https://stackoverflow.com/a/54602353
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -51,7 +57,7 @@ def _main(agent_type: str, model_name: str, episodes: int, n_frames: int, render
 
         seed = 24 * (experiment_setting + 1)
         env = make_env(n_frames=n_frames, experiment_setting=experiment_setting, seed=seed)
-        model = make_agent(agent_type, env=env, seed=seed)
+        model = make_agent(agent_type, name=model_name, env=env, seed=seed)
         model.load(f"./models/{model_name}")
 
         max_timesteps = 100
@@ -74,9 +80,8 @@ def _main(agent_type: str, model_name: str, episodes: int, n_frames: int, render
             rewards_per_experiment[experiment_setting].append(np.mean(rewards))
             collected_per_experiment[experiment_setting][info[0]["Item Collected"] or "N/A"] += 1
 
-            if render:
-                # Close the environment so the renderer window gets destroyed as well
-                env.close()
+            # Close the environment so the renderer window gets destroyed as well
+            env.close()
 
     output_path = f"results/{model_name}"
     Path(output_path).mkdir(exist_ok=True)
