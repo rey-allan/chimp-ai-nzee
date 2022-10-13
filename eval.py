@@ -42,17 +42,17 @@ def _plot_collected(collected: Dict[int, Dict[str, int]], output_path: str) -> N
     plt.savefig(f"{output_path}/items_collected.png", bbox_inches="tight")
 
 
-def _main(agent_type: str, episodes: int, n_frames: int, render: bool = False) -> None:
+def _main(agent_type: str, model_name: str, episodes: int, n_frames: int, render: bool = False) -> None:
     rewards_per_experiment = {setting: [] for setting in ExperimentSettings.list()}
     collected_per_experiment = {setting: {"Left": 0, "Right": 0, "N/A": 0} for setting in ExperimentSettings.list()}
 
     for experiment_setting in ExperimentSettings.list():
-        print(f"Evaluating agent {agent_type} in experiment {experiment_setting} for {episodes} episodes")
+        print(f"Evaluating agent {model_name} in experiment {experiment_setting} for {episodes} episodes")
 
         seed = 24 * (experiment_setting + 1)
         env = make_env(n_frames=n_frames, experiment_setting=experiment_setting, seed=seed)
         model = make_agent(agent_type, env=env, seed=seed)
-        model.load(f"./models/{agent_type}")
+        model.load(f"./models/{model_name}")
 
         max_timesteps = 100
         for _ in tqdm(range(episodes)):
@@ -78,7 +78,7 @@ def _main(agent_type: str, episodes: int, n_frames: int, render: bool = False) -
                 # Close the environment so the renderer window gets destroyed as well
                 env.close()
 
-    output_path = f"results/{agent_type}"
+    output_path = f"results/{model_name}"
     Path(output_path).mkdir(exist_ok=True)
     _plot_rewards(rewards_per_experiment, output_path)
     _plot_collected(collected_per_experiment, output_path)
@@ -87,10 +87,11 @@ def _main(agent_type: str, episodes: int, n_frames: int, render: bool = False) -
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluates RL agents that represent the subordinate subject")
     parser.add_argument("-a", type=str, required=True, help="The type of the trained agent to use")
+    parser.add_argument("-m", type=str, required=True, help="Name of the model to use for loading artifacts")
     parser.add_argument("-e", type=int, default=10, help="The number of evaluation episodes. Defaults to 10")
-    parser.add_argument("--n-frames", type=int, default=1, help="Number of frames to stack as input to the agent")
-    parser.add_argument("--render", action="store_true", help="Whether to render the environment or not")
+    parser.add_argument("--n-frames", type=int, default=1, help="Frames to stack as input to the agent. Defaults to 1")
+    parser.add_argument("--render", action="store_true", help="Whether to render the environment")
 
     args = parser.parse_args()
 
-    _main(args.a, args.e, args.n_frames, args.render)
+    _main(args.a, args.m, args.e, args.n_frames, args.render)
