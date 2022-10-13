@@ -16,8 +16,8 @@ from .agent import Agent
 class PPO(Agent):
     """A standard PPO agent"""
 
-    def __init__(self, env: gym.Env, seed: int = None) -> None:
-        super().__init__(env, seed)
+    def __init__(self, name: str, env: gym.Env, seed: int = None) -> None:
+        super().__init__(name, env, seed)
 
         self._model = SBPPO(
             policy="CnnPolicy",
@@ -28,7 +28,7 @@ class PPO(Agent):
         )
 
     def learn(self, **kwargs: Dict) -> None:
-        self._model.learn(**kwargs, callback=_TqdmCallback())
+        self._model.learn(**kwargs, tb_log_name=self._name, callback=_TqdmCallback())
 
     def predict(self, observation: np.ndarray, **kwargs: Dict) -> Tuple[np.ndarray, Any]:
         return self._model.predict(observation, deterministic=True)

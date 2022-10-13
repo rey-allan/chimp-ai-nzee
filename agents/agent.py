@@ -9,9 +9,10 @@ import numpy as np
 class Agent(ABC):
     """A base agent modeled after the StableBaselines API"""
 
-    def __init__(self, env: gym.Env, seed: int = None) -> None:
+    def __init__(self, name: str, env: gym.Env, seed: int = None) -> None:
         super().__init__()
 
+        self._name = name
         self._env = env
         self._seed = seed
 
