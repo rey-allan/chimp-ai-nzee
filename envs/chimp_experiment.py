@@ -228,7 +228,7 @@ class CollectibleDrape(plab_things.Drape):
         # If the subordinate reaches for a collectible that the dominant went for, it gets penalized
         if subordinate_position == dominant_position:
             the_plot.log("Subordinate and dominant reached the same collectible!")
-            the_plot.add_reward(-100.0)
+            the_plot.add_reward(-1.0)
             the_plot.terminate_episode()
 
         # If the subordinate has reached a collectible that the dominant didn't go for, it gets rewarded
@@ -238,7 +238,7 @@ class CollectibleDrape(plab_things.Drape):
         # the same (first condition above).
         if self.curtain[subordinate_position]:
             the_plot.log("Subordinate has reached a collectible!")
-            the_plot.add_reward(100.0)
+            the_plot.add_reward(1.0)
             # Track information of which collectible was reached by the subordinate
             the_plot["Collected"] = self._name
             the_plot.terminate_episode()
@@ -250,7 +250,7 @@ class CollectibleDrape(plab_things.Drape):
             self.curtain[dominant_position] = False
 
         # Default reward ("living penalty")
-        the_plot.add_reward(0.0)
+        the_plot.add_reward(-0.1)
 
 
 def make_game(setting: int) -> Engine:
