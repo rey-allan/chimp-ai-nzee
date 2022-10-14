@@ -136,3 +136,4 @@ models/*.zip
 
 # Experiment results
 results/**/*.png
+results/**/*.gif

@@ -52,11 +52,11 @@ def _main(agent_type: str, model_name: str, episodes: int, n_frames: int, render
     rewards_per_experiment = {setting: [] for setting in ExperimentSettings.list()}
     collected_per_experiment = {setting: {"Left": 0, "Right": 0, "N/A": 0} for setting in ExperimentSettings.list()}
 
-    for experiment_setting in ExperimentSettings.list():
-        print(f"Evaluating agent {model_name} in experiment {experiment_setting} for {episodes} episodes")
+    for setting in ExperimentSettings.list():
+        print(f"Evaluating agent {model_name} in experiment {ExperimentSettings.name(setting)} for {episodes} episodes")
 
-        seed = 24 * (experiment_setting + 1)
-        env = make_env(n_frames=n_frames, experiment_setting=experiment_setting, seed=seed)
+        seed = 24 * (setting + 1)
+        env = make_env(n_frames=n_frames, experiment_setting=setting, seed=seed)
         model = make_agent(agent_type, name=model_name, env=env, seed=seed)
         model.load(f"./models/{model_name}")
 
@@ -77,8 +77,8 @@ def _main(agent_type: str, model_name: str, episodes: int, n_frames: int, render
                 if done:
                     break
 
-            rewards_per_experiment[experiment_setting].append(np.mean(rewards))
-            collected_per_experiment[experiment_setting][info[0]["Item Collected"] or "N/A"] += 1
+            rewards_per_experiment[setting].append(np.mean(rewards))
+            collected_per_experiment[setting][info[0]["Item Collected"] or "N/A"] += 1
 
             # Close the environment so the renderer window gets destroyed as well
             env.close()

@@ -4,13 +4,14 @@ import time
 import tkinter
 from collections import defaultdict
 from itertools import product
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import gym
 import numpy as np
 import torch
 from gym import spaces
 from pycolab.cropping import ObservationCropper
+from pycolab.rendering import Observation
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
@@ -114,25 +115,39 @@ class ChimpTheoryOfMindEnv(gym.Env):
 
         return self._generate_obs(observation), reward, self._done, info
 
-    def render(self, mode="human") -> None:
+    def render(self, mode="human") -> Optional[np.ndarray]:
         """Renders the environment in a separate window"""
-        self._renderer(self._raw_obs)
+        if mode == "human":
+            self._renderer(self._raw_obs)
+            return None
+
+        if mode == "rgb_array":
+            img = self._to_rgb(self._raw_obs.board)
+            # Swap to channels last as this is what gif/video producing tools expect
+            img = np.swapaxes(img, 0, 2)
+            img = np.swapaxes(img, 0, 1)
+            return img
+
+        raise ValueError(f"Mode {mode} is not supported!")
 
     def close(self) -> None:
         """Closes the environment"""
         self._renderer.close()
 
-    def _generate_obs(self, observation: np.ndarray) -> np.ndarray:
+    def _generate_obs(self, observation: Observation) -> np.ndarray:
         obs = self._obs_cropper.crop(observation)
-        img = np.zeros(self.observation_space.shape)
+        return self._to_rgb(obs.board)
 
-        # Generate an RGB image of the cropped observation
+    def _to_rgb(self, observation: np.ndarray) -> np.ndarray:
+        img = np.zeros((3, observation.shape[0], observation.shape[1]))
+
+        # Generate an RGB image of the observation
         for character in Characters.list():
             value = ord(character)
             color = OBSERVATION_COLORS[character]
-            img[0, obs.board == value] = color[0]
-            img[1, obs.board == value] = color[1]
-            img[2, obs.board == value] = color[2]
+            img[0, observation == value] = color[0]
+            img[1, observation == value] = color[1]
+            img[2, observation == value] = color[2]
 
         return img.astype(np.uint8)
 
